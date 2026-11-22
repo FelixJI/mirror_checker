@@ -5,14 +5,15 @@
 纵向成像比例变化（`Mx`、`My`、`Mx/My-1`）。
 
 实施计划见 [docs/plans/SOFAST_安卓镜面检测实施方案_v2.md](docs/plans/SOFAST_安卓镜面检测实施方案_v2.md)。
-当前进度：**PR-02（Python 参考回放与独立正向仿真）**。本仓库尚不输出
+当前进度：**PR-03（安卓能力探测与屏幕渲染）**。本仓库尚不输出
 任何实际镜子的测量结论。
 
 ## 目录结构
 
 | 路径 | 内容 |
 | --- | --- |
-| `android/` | Android 构建入口与 Kotlin 契约模块（采集应用自 PR-03 加入） |
+| `android/contracts`、`android/probe` | 纯 Kotlin 契约与探测模块（JDK 即可测试） |
+| `android/app` | 诊断 APK（PR-03）：Camera2 能力探测、试开相机流、像素确定的全屏图案、报告导出 |
 | `python/mirror_core/` | 契约、坐标变换、会话校验与合成数据生成 |
 | `python/mirror_core/optics/` | 光学核心（PR-02）：表面族、条纹编解码、正向光线模型、回放求解与合成案例 |
 | `python/mirror_cli/` | `validate` / `make-sample` / `simulate` 命令（`solve`→PR-07、`workbench`→PR-08） |
@@ -39,12 +40,17 @@ PYTHONPATH=python python -m mirror_cli make-sample --output sample.zip
 PYTHONPATH=python python -m mirror_cli simulate --case sphere_pos --output out/sphere_pos
 ```
 
-Android/Kotlin 契约测试（需要 JDK 17，Gradle wrapper 自动解析）：
+Android/Kotlin（契约与探测模块只需 JDK 17，Gradle wrapper 自动解析；
+`:app` 诊断 APK 需要 Android SDK，无 SDK 时自动跳过）：
 
 ```bash
 cd android
-./gradlew --no-daemon :contracts:test      # Windows: gradlew.bat --no-daemon :contracts:test
+./gradlew --no-daemon :contracts:test :probe:test   # Windows: gradlew.bat ...
+./gradlew --no-daemon :app:assembleDebug            # 需要 Android SDK（CI 提供）
 ```
+
+诊断 APK 的真机操作步骤（H03）见
+[docs/human/h03-diagnostic-apk.md](docs/human/h03-diagnostic-apk.md)。
 
 ## 数据契约
 

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- 能力报告保存于 files/reports，通过 FileProvider 分享（H03 人工证据） -->
+    <files-path
+        name="reports"
+        path="reports/" />
+</paths>

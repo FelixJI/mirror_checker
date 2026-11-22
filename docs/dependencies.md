@@ -31,11 +31,18 @@ PYTHONPATH=python python -m unittest discover -s tests -p "test_*.py" -t .
 | kotlinx-serialization-json | 1.7.3 | 同上 |
 | JUnit | 4.13.2（仅测试） | 同上 |
 | JDK 工具链 | 17 | `android/contracts/build.gradle.kts` |
-| AGP / compileSdk | 未锁定 | PR-03 按 H01 真机信息决定 |
+| AGP | 8.7.3 | `android/gradle/libs.versions.toml` |
+| compileSdk / targetSdk | 35 | `android/app/build.gradle.kts` |
+| minSdk | 26 | 同上（H03 首台平板确认后复核） |
+| Compose BOM | 2024.10.01 | `android/gradle/libs.versions.toml` |
+| androidx core / activity / lifecycle | 1.13.1 / 1.9.3 / 2.8.7 | 同上 |
 
-`android/contracts` 是纯 Kotlin/JVM 模块，构建只需要 JDK（Gradle wrapper
-自动解析工具链与发行版），不需要 Android SDK；PR-03 加入 `:app`
-（AGP）模块时再锁定 AGP 与 SDK 版本。
+`android/contracts` 与 `android/probe` 是纯 Kotlin/JVM 模块，构建只需要
+JDK（Gradle wrapper 自动解析工具链与发行版），不需要 Android SDK。
+`android/app`（AGP 应用模块，PR-03 起）需要 Android SDK：CI 由
+ubuntu-latest 自带 SDK（`ANDROID_HOME`）构建；无 SDK 的本地环境在
+`settings.gradle.kts` 中自动跳过 `:app`，契约与探测测试仍可运行。
+AGP/SDK 版本为无真机信息时的保守锁定，H03 提交首台平板报告后复核。
 
 ## CI
 
@@ -44,6 +51,7 @@ GitHub Actions（`.github/workflows/ci.yml`）：
 - Python 任务：ubuntu-latest + windows-latest × Python 3.11，
   运行 unittest 与 CLI 校验，安装 jsonschema 以启用 Schema 一致性检查。
 - Android 任务：ubuntu-latest × JDK 17（Temurin），运行
-  `./gradlew --no-daemon :contracts:test`。
+  `:contracts:test`、`:probe:test`，构建 `:app:assembleDebug` 并上传
+  诊断 APK artifact（H03 真机安装用）。
 
 CI 使用仓库内小型合成回归包，不下载大体积真实数据（实施方案 §2.3）。
