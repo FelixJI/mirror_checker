@@ -1,0 +1,11 @@
+# Python 运行时依赖锁（PR-01）
+#
+# mirror_core / mirror_cli 当前零运行时依赖（仅标准库）。
+# 可选开发依赖（不进入运行时）：
+#   jsonschema>=4,<5   # tests/python/test_schemas.py 的 Schema 一致性检查
+#
+# PR-02 起引入 NumPy/SciPy/OpenCV 等依赖时：
+#   1. 逐版本锁定并附哈希（pip-compile --generate-hashes 或等价方式）；
+#   2. 升级必须以固定上游提交的回放一致性为依据（docs/upstream.md）；
+#   3. 上游 requirements 对 NumPy/SciPy/OpenCV 有范围约束，不能直接升级
+#      为全套最新版本。
