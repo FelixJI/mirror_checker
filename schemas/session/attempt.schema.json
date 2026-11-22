@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/FelixJI/mirror_checker/schemas/session/attempt.schema.json",
+  "title": "采集尝试 patches/<PID>/attempts/<AID>/attempt.json",
+  "description": "一个补丁位置的一次采集尝试：绑定 recipe/calibration/device 配置，登记逐帧元数据。expected_frames 必须等于配方图案按 display_order 排列并乘以 repeats 的序列；实际 frames 与之一致才允许 capture_status=complete。中止后重采必须使用新的 attempt_id，不得从两次尝试拼凑相移序列（实施方案 §8.3）。",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "patch_id",
+    "attempt_id",
+    "capture_status",
+    "recipe_hash",
+    "calibration_id",
+    "device_config_hash",
+    "started_utc",
+    "expected_frames",
+    "frames",
+    "observations"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "patch_id": { "type": "string", "pattern": "^[^/]+$" },
+    "attempt_id": { "type": "string", "pattern": "^[^/]+$" },
+    "capture_status": { "enum": ["collecting", "complete", "aborted"] },
+    "recipe_hash": { "$ref": "#/$defs/sha256" },
+    "calibration_id": { "type": ["string", "null"] },
+    "device_config_hash": { "$ref": "#/$defs/sha256" },
+    "started_utc": { "type": "string" },
+    "expected_frames": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" }
+    },
+    "frames": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "frame_index",
+          "pattern_id",
+          "file",
+          "format",
+          "width_px",
+          "height_px",
+          "sensor_timestamp_ns",
+          "exposure_time_ns",
+          "timestamp_source"
+        ],
+        "properties": {
+          "frame_index": { "type": "integer", "minimum": 0 },
+          "pattern_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+          "file": {
+            "type": "string",
+            "pattern": "^frames/[A-Za-z0-9][A-Za-z0-9._-]*$",
+            "description": "相对本 attempt 目录的帧文件路径"
+          },
+          "format": { "enum": ["raw8"], "description": "首版只允许 8 位无符号原始亮度数组" },
+          "width_px": { "type": "integer", "minimum": 1 },
+          "height_px": { "type": "integer", "minimum": 1 },
+          "sensor_timestamp_ns": {
+            "$ref": "#/$defs/ns_timestamp",
+            "description": "图像时间戳（首行曝光开始），与 SENSOR_TIMESTAMP 同源配对"
+          },
+          "exposure_time_ns": { "$ref": "#/$defs/ns_timestamp" },
+          "timestamp_source": {
+            "enum": ["REALTIME", "UNKNOWN"],
+            "description": "REALTIME 与 UNKNOWN 的可比较范围不同，必须记录来源"
+          },
+          "capture_result": {
+            "type": "object",
+            "description": "实际生效参数的精简 CaptureResult 子集"
+          }
+        }
+      }
+    },
+    "observations": {
+      "type": "object",
+      "required": ["path"],
+      "properties": { "path": { "const": "observations.json" } }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "ns_timestamp": { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" }
+  }
+}

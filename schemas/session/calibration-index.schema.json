@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/FelixJI/mirror_checker/schemas/session/calibration-index.schema.json",
+  "title": "标定索引 calibration/index.json",
+  "description": "本次会话使用的完整标定内容索引。条目文件位于 calibration/ 目录内；诊断会话可以 present=false，不包含本文件。标定档绑定设备配置与有效条件（实施方案 §5.2）。",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "provenance",
+    "calibration_id",
+    "created_utc",
+    "items",
+    "applicable_conditions"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "provenance": { "enum": ["synthetic", "device"] },
+    "calibration_id": { "type": "string", "minLength": 1 },
+    "created_utc": { "type": "string" },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "status", "file"],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "description": "camera_intrinsics / screen_mapping / gray_response / display_exposure_timing 等"
+          },
+          "status": {
+            "enum": ["synthetic", "preliminary", "validated"],
+            "description": "validated 才能进入定量支持；synthetic/preliminary 只能用于诊断"
+          },
+          "file": { "type": "string", "pattern": "^[^/]+$" }
+        }
+      }
+    },
+    "applicable_conditions": {
+      "type": "object",
+      "required": ["device_config_hash"],
+      "properties": {
+        "device_config_hash": { "$ref": "#/$defs/sha256" },
+        "notes": { "type": "string" }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}

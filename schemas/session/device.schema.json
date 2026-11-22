@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/FelixJI/mirror_checker/schemas/session/device.schema.json",
+  "title": "设备档案 device.json",
+  "description": "设备型号、相机能力、显示与传感器信息，以及本次采集使用的配置快照 device_config 与其规范哈希。能力必须逐相机实测，不从后摄或机型宣传推断（实施方案 §5.1）。",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "provenance",
+    "device_id",
+    "camera",
+    "display",
+    "device_config",
+    "device_config_hash"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "provenance": { "enum": ["synthetic", "device"] },
+    "device_id": { "type": "string", "minLength": 1 },
+    "model": { "type": "string" },
+    "android": {
+      "type": "object",
+      "properties": {
+        "version_release": { "type": ["string", "null"] },
+        "sdk_int": { "type": ["integer", "null"] }
+      }
+    },
+    "camera": {
+      "type": "object",
+      "required": ["camera_id", "facing", "stream"],
+      "properties": {
+        "camera_id": { "type": "string", "minLength": 1 },
+        "facing": { "enum": ["front", "back", "external"] },
+        "hardware_level": {
+          "enum": ["legacy", "limited", "full", "level_3", "external", "unknown"]
+        },
+        "control_class": {
+          "enum": ["manual", "lockable", "uncontrolled"],
+          "description": "manual=手动受控；lockable=可锁定且实测稳定；uncontrolled=自动参数不可控（只能采诊断数据）"
+        },
+        "stream": {
+          "type": "object",
+          "required": ["format", "width_px", "height_px", "fps"],
+          "properties": {
+            "format": { "type": "string", "minLength": 1 },
+            "width_px": { "type": "integer", "minimum": 1 },
+            "height_px": { "type": "integer", "minimum": 1 },
+            "fps": { "type": "number", "exclusiveMinimum": 0 }
+          }
+        }
+      }
+    },
+    "display": {
+      "type": "object",
+      "required": ["surface_width_px", "surface_height_px", "effective_luminous"],
+      "properties": {
+        "surface_width_px": { "type": "integer", "minimum": 1 },
+        "surface_height_px": { "type": "integer", "minimum": 1 },
+        "rotation_at_capture": { "type": "integer", "enum": [0, 90, 180, 270] },
+        "natural_orientation": { "enum": ["landscape", "portrait"] },
+        "effective_luminous": {
+          "type": "object",
+          "required": ["width_m", "height_m"],
+          "description": "实测有效发光矩形（米），不能由 dpi 或对角线推导",
+          "properties": {
+            "width_m": { "type": "number", "exclusiveMinimum": 0 },
+            "height_m": { "type": "number", "exclusiveMinimum": 0 }
+          }
+        }
+      }
+    },
+    "sensors": {
+      "type": "object",
+      "properties": {
+        "gyroscope": { "type": "boolean" },
+        "accelerometer": { "type": "boolean" }
+      }
+    },
+    "device_config": {
+      "type": "object",
+      "description": "本次采集使用的完整配置快照；其规范 JSON 的 SHA-256 即 device_config_hash"
+    },
+    "device_config_hash": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}

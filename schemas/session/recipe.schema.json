@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/FelixJI/mirror_checker/schemas/session/recipe.schema.json",
+  "title": "采集配方 recipe.json",
+  "description": "不可变、带哈希的采集配方（实施方案 §5.3）。recipe_hash 是除 recipe_hash 字段外全部内容的规范 JSON SHA-256；任何字段变化都会导致哈希不匹配并被明确报错。",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "provenance",
+    "recipe_id",
+    "recipe_version",
+    "patterns",
+    "display",
+    "camera",
+    "wait_strategy",
+    "repeats",
+    "quality_gates",
+    "applicable_calibration_id",
+    "applicable_device_config_hash",
+    "recipe_hash"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "provenance": { "enum": ["synthetic", "device"] },
+    "recipe_id": { "type": "string", "minLength": 1 },
+    "recipe_version": { "type": "integer", "minimum": 1 },
+    "patterns": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["pattern_id", "kind", "display_order"],
+        "properties": {
+          "pattern_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+          },
+          "kind": {
+            "enum": ["fringe", "gray", "mask", "white", "black"]
+          },
+          "display_order": { "type": "integer" },
+          "direction_deg": { "enum": [0, 90] },
+          "frequency_cycles_per_pattern": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "有效发光区域内的整周期数"
+          },
+          "phase_shift_rad": { "type": "number" },
+          "level": { "type": "integer", "minimum": 0, "maximum": 255 }
+        }
+      }
+    },
+    "display": {
+      "type": "object",
+      "required": ["region_normalized", "background_level", "amplitude_level"],
+      "properties": {
+        "region_normalized": {
+          "type": "object",
+          "required": ["u0", "v0", "u1", "v1"],
+          "properties": {
+            "u0": { "type": "number", "minimum": 0, "maximum": 1 },
+            "v0": { "type": "number", "minimum": 0, "maximum": 1 },
+            "u1": { "type": "number", "minimum": 0, "maximum": 1 },
+            "v1": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        "background_level": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "amplitude_level": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "brightness_setting": {}
+      }
+    },
+    "camera": {
+      "type": "object",
+      "required": ["exposure_time_ns"],
+      "properties": {
+        "exposure_time_ns": { "$ref": "#/$defs/ns_timestamp" },
+        "sensor_sensitivity_iso": { "type": "number" },
+        "ae_locked": { "type": "boolean" }
+      }
+    },
+    "wait_strategy": {
+      "type": "object",
+      "required": ["timeout_ns"],
+      "properties": {
+        "settle_display_frames": { "type": "integer", "minimum": 0 },
+        "min_gap_ns": { "$ref": "#/$defs/ns_timestamp" },
+        "timeout_ns": { "$ref": "#/$defs/ns_timestamp" }
+      }
+    },
+    "repeats": { "type": "integer", "minimum": 1 },
+    "quality_gates": { "type": "object" },
+    "applicable_calibration_id": {
+      "type": ["string", "null"],
+      "description": "诊断配方允许 null（显式无几何标定）"
+    },
+    "applicable_device_config_hash": { "$ref": "#/$defs/sha256" },
+    "recipe_hash": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "ns_timestamp": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)$",
+      "description": "纳秒数值的十进制字符串，避免 JavaScript 精度损失"
+    }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/FelixJI/mirror_checker/schemas/results/job.schema.json",
+  "title": "求解任务 job.json",
+  "description": "派生结果的求解任务登记（实施方案 §8.2/§8.3）。PR-01 只固定状态枚举与输入哈希结构；任务由 PR-07+ 产生。同一输入换算法或参数应建立新任务；上传成功不等于测量成功。",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "job_id",
+    "created_utc",
+    "input",
+    "status",
+    "support_status"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "job_id": { "type": "string", "minLength": 1 },
+    "created_utc": { "type": "string" },
+    "input": {
+      "type": "object",
+      "required": [
+        "session_sha256",
+        "recipe_hash",
+        "calibration_id",
+        "parameter_hash",
+        "code_commit",
+        "dependency_lock_sha256"
+      ],
+      "properties": {
+        "session_sha256": { "$ref": "#/$defs/sha256", "description": "会话 ZIP 整体的 SHA-256" },
+        "recipe_hash": { "$ref": "#/$defs/sha256" },
+        "calibration_id": { "type": ["string", "null"] },
+        "parameter_hash": { "$ref": "#/$defs/sha256" },
+        "code_commit": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" },
+        "dependency_lock_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "status": {
+      "enum": ["queued", "running", "succeeded", "failed", "cancelled"],
+      "description": "求解状态"
+    },
+    "support_status": {
+      "enum": ["diagnostic", "local_validated", "global_validated"],
+      "description": "结果支持状态：diagnostic 不能用于定量结论"
+    },
+    "error": { "type": "string" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}

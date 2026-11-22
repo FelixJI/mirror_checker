@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/FelixJI/mirror_checker/schemas/session/layout.schema.json",
+  "title": "参考布局 layout.json",
+  "description": "条带标记布局与镜面参考关系。所有实测尺寸带工具与误差估计；未知值必须写 \"unknown\"，不得用模板默认值填成实测值（实施方案 §11.2）。条带被移动、重贴或重印后必须建立新 layout_id。",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "provenance",
+    "layout_id",
+    "marker_family",
+    "layout_frame",
+    "strips",
+    "mirror_reference",
+    "installation"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "provenance": { "enum": ["synthetic", "device"] },
+    "layout_id": { "type": "string", "minLength": 1 },
+    "marker_family": {
+      "type": "object",
+      "required": ["detector", "family", "boundary"],
+      "properties": {
+        "detector": { "type": "string" },
+        "family": { "type": "string" },
+        "boundary": {
+          "type": "string",
+          "description": "标记边长的边界定义（检测器定义的黑白交界；白色留白不计入）"
+        }
+      }
+    },
+    "layout_frame": {
+      "type": "object",
+      "required": ["description"],
+      "properties": { "description": { "type": "string", "minLength": 1 } }
+    },
+    "strips": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["strip_id", "markers"],
+        "properties": {
+          "strip_id": { "type": "string", "minLength": 1 },
+          "markers": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["tag_id", "corners_layout_m", "side_length_m"],
+              "properties": {
+                "tag_id": { "type": "integer" },
+                "corners_layout_m": {
+                  "type": "array",
+                  "minItems": 4,
+                  "maxItems": 4,
+                  "description": "布局系三维角点，顺序：左上、右上、右下、左下（米）",
+                  "items": { "$ref": "#/$defs/vec3" }
+                },
+                "side_length_m": { "$ref": "#/$defs/measurement_or_unknown" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "strip_relations": {
+      "type": "object",
+      "description": "双条的相对三维关系；两条分开安装的直条不能未经检查就当作严格共面",
+      "properties": {
+        "center_separation_m": { "$ref": "#/$defs/measurement_or_unknown" },
+        "longitudinal_origin_offset_m": { "type": ["string", "number"] },
+        "relative_tilt": { "type": ["string", "object"] },
+        "coplanar_assumption": { "type": ["string", "boolean"] }
+      }
+    },
+    "mirror_reference": {
+      "type": "object",
+      "required": ["T_M_L", "method"],
+      "properties": {
+        "T_M_L": { "$ref": "#/$defs/transform" },
+        "method": { "type": "string", "minLength": 1 },
+        "glass_thickness": { "type": ["string", "number"] },
+        "uncertainty": { "type": ["string", "object"] }
+      }
+    },
+    "installation": {
+      "type": "object",
+      "required": ["installed_utc", "operator"],
+      "properties": {
+        "installed_utc": { "type": "string" },
+        "operator": { "type": "string" },
+        "photos": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "$defs": {
+    "vec3": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "type": "number" }
+    },
+    "measurement_or_unknown": {
+      "oneOf": [
+        { "const": "unknown" },
+        {
+          "type": "object",
+          "required": ["measured"],
+          "properties": {
+            "measured": {
+              "type": "object",
+              "required": ["value"],
+              "properties": {
+                "value": { "type": "number" },
+                "tool": { "type": "string" },
+                "resolution_m": { "type": "number" },
+                "error_estimate_m": { "type": "number" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "transform": {
+      "type": "object",
+      "description": "T_A_B：把 from_frame 坐标变换到 to_frame",
+      "required": ["from_frame", "to_frame", "convention", "rotation", "translation_m"],
+      "properties": {
+        "from_frame": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+        "to_frame": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+        "convention": { "const": "T_A_B" },
+        "rotation": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "3x3 行主序旋转矩阵",
+          "items": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": { "type": "number" }
+          }
+        },
+        "translation_m": { "$ref": "#/$defs/vec3" }
+      }
+    }
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/FelixJI/mirror_checker/schemas/session/observations.schema.json",
+  "title": "观测记录 patches/<PID>/attempts/<AID>/observations.json",
+  "description": "一次尝试中的标记角点、IMU 片段与初步位姿。位置/姿态若来自标记平面假设，必须记录该假设与误差，而不是只保留一个重投影分数（实施方案 §8.2）。",
+  "type": "object",
+  "required": ["schema_version", "markers"],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "markers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["tag_id", "valid", "corners_image_px"],
+        "properties": {
+          "tag_id": { "type": "integer" },
+          "valid": { "type": "boolean" },
+          "corners_image_px": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "description": "图像坐标角点，顺序：左上、右上、右下、左下（像素，可为亚像素浮点）",
+            "items": { "$ref": "#/$defs/vec2" }
+          },
+          "edge_length_px": {
+            "type": "object",
+            "properties": { "mean": { "type": "number" } }
+          },
+          "border_distance_px": { "type": "number" }
+        }
+      }
+    },
+    "imu": {
+      "type": "object",
+      "properties": {
+        "segments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["t_start_ns", "t_end_ns"],
+            "properties": {
+              "t_start_ns": { "$ref": "#/$defs/ns_timestamp" },
+              "t_end_ns": { "$ref": "#/$defs/ns_timestamp" },
+              "gyro_radps": { "$ref": "#/$defs/vec3" },
+              "accel_mps2": { "$ref": "#/$defs/vec3" }
+            }
+          }
+        }
+      }
+    },
+    "preliminary_pose": {
+      "type": "object",
+      "required": ["T_L_C", "method"],
+      "properties": {
+        "T_L_C": { "$ref": "#/$defs/transform" },
+        "method": { "type": "string" },
+        "reprojection_error_px": { "type": "number" },
+        "assumptions": { "type": "array", "items": { "type": "string" } },
+        "valid": { "type": "boolean" }
+      }
+    },
+    "stationarity": {
+      "type": "object",
+      "properties": {
+        "status": { "enum": ["pass", "fail", "unknown"] },
+        "max_corner_motion_px": { "type": "number" }
+      }
+    }
+  },
+  "$defs": {
+    "vec2": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "type": "number" }
+    },
+    "vec3": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "type": "number" }
+    },
+    "ns_timestamp": { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" },
+    "transform": {
+      "type": "object",
+      "description": "T_A_B：把 from_frame 坐标变换到 to_frame",
+      "required": ["from_frame", "to_frame", "convention", "rotation", "translation_m"],
+      "properties": {
+        "from_frame": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+        "to_frame": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+        "convention": { "const": "T_A_B" },
+        "rotation": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": { "type": "number" }
+          }
+        },
+        "translation_m": { "$ref": "#/$defs/vec3" }
+      }
+    }
+  }
+}
