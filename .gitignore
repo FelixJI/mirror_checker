@@ -18,6 +18,7 @@ android/*/build/
 # IDE
 .idea/
 .vscode/
+.zcode/
 
 # OS
 .DS_Store
