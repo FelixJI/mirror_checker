@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from mirror_core.contracts import ContractError
+from mirror_core.optics import cases as optics_cases
 from mirror_core.sample import write_sample_session
 from mirror_core.session import SessionPackage
 
@@ -34,6 +35,24 @@ def _cmd_make_sample(args: argparse.Namespace) -> int:
     SessionPackage.open(output)
     print(f"合成会话已生成并通过契约校验: {output}")
     return 0
+
+
+def _cmd_simulate(args: argparse.Namespace) -> int:
+    run = optics_cases.run_case(args.case)
+    written = optics_cases.export_case(run, Path(args.output))
+    verify = optics_cases.verify_case(run)
+    print(f"合成案例已执行并导出: {args.case}")
+    print(f"  输出目录: {args.output}")
+    for path in written:
+        print(f"  {path.name}")
+    print(f"  活动像素: {run.forward_result.active_pixel_count}")
+    print(f"  法线角误差(max): {verify['cross_validation']['max_normal_angle_error_rad']:.3e} rad")
+    if verify["all_passed"]:
+        print("  验收项: 全部通过")
+        return 0
+    failed = [check["name"] for check in verify["checks"] if not check["passed"]]
+    print(f"  验收项未通过: {', '.join(failed)}", file=sys.stderr)
+    return 1
 
 
 def _cmd_solve(args: argparse.Namespace) -> int:
@@ -66,6 +85,20 @@ def build_parser() -> argparse.ArgumentParser:
     p_sample = sub.add_parser("make-sample", help="生成明确标注为合成的范例会话 ZIP")
     p_sample.add_argument("--output", required=True, help="输出 ZIP 路径")
     p_sample.set_defaults(func=_cmd_make_sample)
+
+    p_simulate = sub.add_parser(
+        "simulate",
+        help="执行标准合成案例:正向仿真 + 回放求解并导出中间量(PR-02)",
+    )
+    p_simulate.add_argument(
+        "--case",
+        required=True,
+        help=f"案例名(可用:{', '.join(sorted(optics_cases.CASES))})",
+    )
+    p_simulate.add_argument(
+        "--output", required=True, help="输出目录(写入 case/forward/replay/verify 四个 JSON)"
+    )
+    p_simulate.set_defaults(func=_cmd_simulate)
 
     p_solve = sub.add_parser("solve", help="求解会话（PR-07 交付）")
     p_solve.add_argument("session", help="会话包路径（ZIP）")
