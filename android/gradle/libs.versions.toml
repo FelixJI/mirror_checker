@@ -1,0 +1,12 @@
+# 版本目录：Android 侧依赖统一在此锁定（docs/dependencies.md）
+[versions]
+kotlin = "2.0.21"
+kotlinx-serialization = "1.7.3"
+junit = "4.13.2"
+
+[libraries]
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+junit = { module = "junit:junit", version.ref = "junit" }
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
