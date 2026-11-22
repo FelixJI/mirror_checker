@@ -53,5 +53,10 @@ GitHub Actions（`.github/workflows/ci.yml`）：
 - Android 任务：ubuntu-latest × JDK 17（Temurin），运行
   `:contracts:test`、`:probe:test`，构建 `:app:assembleDebug` 并上传
   诊断 APK artifact（H03 真机安装用）。
+- 发布工作流（`.github/workflows/release.yml`，手动触发）：选择
+  patch/minor/major 递增或填写显式版本号（x.y.z）；在
+  `android/app/build.gradle.kts` 中更新 `versionName` 并将 `versionCode`
+  单调 +1，提交并打 `vX.Y.Z` 标签（仅允许在 main 上运行），随后构建
+  APK、生成 SHA-256 并创建 GitHub Release。
 
 CI 使用仓库内小型合成回归包，不下载大体积真实数据（实施方案 §2.3）。
