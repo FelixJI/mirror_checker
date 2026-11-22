@@ -1,0 +1,121 @@
+name: release
+
+# 手动发布诊断 APK：Actions → release → Run workflow，
+# 选择版本递增方式（patch/minor/major）或填写显式版本号（x.y.z）。
+# 流程：在 android/app/build.gradle.kts 中递增 versionName、versionCode+1 →
+# 提交并打 vX.Y.Z 标签 → 跑 JVM 测试 → 构建 debug APK → 创建 GitHub Release 附 APK 与 SHA-256。
+# 仅允许在 main 分支上运行，避免从特性分支发布版本。
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "版本递增方式（基于 android/app 当前 versionName）"
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+        required: true
+      version:
+        description: "显式版本号（x.y.z；填写后忽略上面的递增方式）"
+        type: string
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  apk-release:
+    name: 诊断 APK 发布（版本递增 + 标签 + Release）
+    runs-on: ubuntu-latest
+    env:
+      BUMP: ${{ inputs.bump }}
+      EXPLICIT_VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: 只允许在 main 上发布
+        run: |
+          if [ "${GITHUB_REF_NAME}" != "main" ]; then
+            echo "发布必须在 main 分支上手动触发（当前 ${GITHUB_REF_NAME}）"
+            exit 1
+          fi
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: 计算下一版本并提交标签
+        id: version
+        run: |
+          set -euo pipefail
+          GRADLE=android/app/build.gradle.kts
+          CURRENT=$(grep -oP 'versionName = "\K[0-9]+\.[0-9]+\.[0-9]+' "$GRADLE" | head -n1)
+          if [ -z "$CURRENT" ]; then echo "无法从 $GRADLE 读取 versionName"; exit 1; fi
+          NEXT="$EXPLICIT_VERSION"
+          if [ -z "$NEXT" ]; then
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+            case "$BUMP" in
+              patch) NEXT="$MAJOR.$MINOR.$((PATCH+1))" ;;
+              minor) NEXT="$MAJOR.$((MINOR+1)).0" ;;
+              major) NEXT="$((MAJOR+1)).0.0" ;;
+              *) echo "未知递增方式：$BUMP"; exit 1 ;;
+            esac
+          fi
+          if ! echo "$NEXT" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "版本号必须形如 x.y.z，实际为：$NEXT"; exit 1
+          fi
+          if [ "$NEXT" = "$CURRENT" ]; then
+            echo "版本号与当前相同（$CURRENT），请递增"; exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/v$NEXT" >/dev/null; then
+            echo "标签 v$NEXT 已存在，请选择更高的版本"; exit 1
+          fi
+          # versionCode 单调 +1（保证升级路径；sideload 场景不编码版本语义）
+          CODE=$(grep -oP 'versionCode = \K[0-9]+' "$GRADLE" | head -n1)
+          CODE=$((CODE+1))
+          sed -i -E "s/versionCode = [0-9]+/versionCode = $CODE/" "$GRADLE"
+          sed -i -E "s/versionName = \"[^\"]+\"/versionName = \"$NEXT\"/" "$GRADLE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "chore(release): 诊断 APK v$NEXT"
+          git tag "v$NEXT"
+          git push origin main --tags
+          echo "version=$NEXT" >> "$GITHUB_OUTPUT"
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+
+      - name: 安装 Android SDK 组件
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          "$SDKMANAGER" --install "platforms;android-35" "build-tools;34.0.0" >/dev/null
+
+      - name: Kotlin 测试（contracts/probe）
+        working-directory: android
+        run: ./gradlew --no-daemon --console=plain :contracts:test :probe:test
+
+      - name: 构建诊断 APK
+        working-directory: android
+        run: ./gradlew --no-daemon --console=plain :app:assembleDebug
+
+      - name: 生成校验和
+        run: |
+          cd android/app/build/outputs/apk/debug
+          sha256sum app-debug.apk | tee app-debug.apk.sha256
+
+      - name: 创建 GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "v$VERSION" \
+            --title "诊断 APK v$VERSION" \
+            --notes "手动发布的诊断 APK（PR-03 工具链）。安装与操作步骤见 docs/human/h03-diagnostic-apk.md；版本号已提交至 android/app/build.gradle.kts 并打标签 v$VERSION。" \
+            android/app/build/outputs/apk/debug/app-debug.apk \
+            android/app/build/outputs/apk/debug/app-debug.apk.sha256
