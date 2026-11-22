@@ -466,8 +466,10 @@ def write_sample_session(path: str | Path) -> Path:
     session = build_session()
 
     def _info(arcname: str) -> zipfile.ZipInfo:
+        # ZIP_STORED（无压缩）保证跨平台字节级稳定：不同 zlib 版本的
+        # deflate 输出可能不同，而契约回归需要“同一生成器版本 → 同一字节”。
         info = zipfile.ZipInfo(arcname, date_time=(2026, 11, 21, 8, 0, 0))
-        info.compress_type = zipfile.ZIP_DEFLATED
+        info.compress_type = zipfile.ZIP_STORED
         info.external_attr = 0o644 << 16
         return info
 
