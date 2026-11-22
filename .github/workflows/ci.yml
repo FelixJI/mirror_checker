@@ -49,7 +49,10 @@ jobs:
           distribution: temurin
           java-version: "17"
       - name: 安装 Android SDK 组件
-        run: sdkmanager --install "platforms;android-35" "build-tools;34.0.0" >/dev/null
+        run: |
+          # ubuntu runner 的 sdkmanager 不在 PATH，位于 cmdline-tools 目录
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          "$SDKMANAGER" --install "platforms;android-35" "build-tools;34.0.0" >/dev/null
       - name: Kotlin 测试（contracts/probe）
         working-directory: android
         run: ./gradlew --no-daemon --console=plain :contracts:test :probe:test
