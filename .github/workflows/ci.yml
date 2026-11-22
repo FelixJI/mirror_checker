@@ -40,7 +40,7 @@ jobs:
           cmp tests/fixtures/synthetic_session_v1.zip "$RUNNER_TEMP/regen.zip"
 
   android:
-    name: Android contracts
+    name: Android (tests + diagnostic APK)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,6 +48,20 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - name: Kotlin 契约测试
+      - name: 安装 Android SDK 组件
+        run: |
+          # ubuntu runner 的 sdkmanager 不在 PATH，位于 cmdline-tools 目录
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          "$SDKMANAGER" --install "platforms;android-35" "build-tools;34.0.0" >/dev/null
+      - name: Kotlin 测试（contracts/probe）
         working-directory: android
-        run: ./gradlew --no-daemon --console=plain :contracts:test
+        run: ./gradlew --no-daemon --console=plain :contracts:test :probe:test
+      - name: 构建诊断 APK
+        working-directory: android
+        run: ./gradlew --no-daemon --console=plain :app:assembleDebug
+      - name: 上传诊断 APK（H03 真机安装）
+        uses: actions/upload-artifact@v4
+        with:
+          name: mirror-diag-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
