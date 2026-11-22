@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mirror-checker"
+version = "0.1.0"
+description = "家用穿衣镜镜面成像质量检测：会话数据契约与电脑端参考实现"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+# 运行时零依赖：mirror_core / mirror_cli 仅使用标准库（docs/dependencies.md）
+dependencies = []
+
+[project.optional-dependencies]
+schema = ["jsonschema>=4,<5"]
+dev = ["jsonschema>=4,<5", "pytest"]
+
+[tool.setuptools]
+package-dir = { "" = "python" }
+packages = ["mirror_core", "mirror_cli"]

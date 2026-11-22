@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/FelixJI/mirror_checker/schemas/session/experiment.schema.json",
+  "title": "人工操作记录 experiment.json",
+  "description": "操作者填写的摆位、距离检查、安装变化和异常记录（实施方案 §8.1）。软件不能代替这些实物信息；缺项按 unknown 处理并进入误差分析。",
+  "type": "object",
+  "required": ["schema_version", "operator", "entries"],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "operator": { "type": "string" },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["note"],
+        "properties": {
+          "time_utc": { "type": "string" },
+          "kind": {
+            "type": "string",
+            "description": "如 setup / distance_check / installation_change / anomaly"
+          },
+          "note": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

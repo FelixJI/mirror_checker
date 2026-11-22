@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/FelixJI/mirror_checker/schemas/session/session.schema.json",
+  "title": "会话清单 session.json",
+  "description": "采集会话 ZIP 的入口文件：清单、状态与各契约文件的引用。单位、坐标方向与状态枚举见 docs/contracts/README.md；两端代码（python/mirror_core 与 android/contracts）强制同一规则。",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "package_kind",
+    "session_id",
+    "created_utc",
+    "provenance",
+    "device",
+    "calibration",
+    "layout",
+    "recipe",
+    "capture_status",
+    "transfer_status",
+    "units",
+    "coordinate_conventions",
+    "patches",
+    "files"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "package_kind": { "const": "capture_session" },
+    "session_id": { "type": "string", "minLength": 1 },
+    "created_utc": { "type": "string", "description": "ISO 8601 UTC 时间" },
+    "provenance": {
+      "enum": ["synthetic", "device"],
+      "description": "synthetic 表示合成数据（测试/回归）；device 表示真机采集。合成包必须显式标注。"
+    },
+    "device": {
+      "type": "object",
+      "required": ["device_id", "config_hash", "path"],
+      "properties": {
+        "device_id": { "type": "string", "minLength": 1 },
+        "config_hash": { "$ref": "#/$defs/sha256" },
+        "path": { "const": "device.json" }
+      }
+    },
+    "calibration": {
+      "type": "object",
+      "required": ["present"],
+      "properties": {
+        "present": {
+          "type": "boolean",
+          "description": "诊断采集允许 present=false（显式无几何标定），此时 calibration_id 必须为 null。"
+        },
+        "calibration_id": { "type": ["string", "null"] },
+        "path": { "const": "calibration/index.json" }
+      }
+    },
+    "layout": {
+      "type": "object",
+      "required": ["layout_id", "path"],
+      "properties": {
+        "layout_id": { "type": "string", "minLength": 1 },
+        "path": { "const": "layout.json" }
+      }
+    },
+    "recipe": {
+      "type": "object",
+      "required": ["recipe_id", "recipe_hash", "path"],
+      "properties": {
+        "recipe_id": { "type": "string", "minLength": 1 },
+        "recipe_hash": { "$ref": "#/$defs/sha256" },
+        "path": { "const": "recipe.json" }
+      }
+    },
+    "capture_status": { "enum": ["collecting", "complete", "aborted"] },
+    "transfer_status": { "enum": ["local_only", "transferring", "verified"] },
+    "units": {
+      "type": "object",
+      "required": ["length", "angle", "time"],
+      "properties": {
+        "length": { "const": "m", "description": "所有长度字段统一为米；未知单位必须报错" },
+        "angle": { "const": "rad", "description": "所有角度字段统一为弧度" },
+        "time": { "const": "s", "description": "字段名以 _ns 结尾的纳秒时间戳使用十进制字符串" }
+      }
+    },
+    "coordinate_conventions": {
+      "type": "object",
+      "required": ["transform", "image_coordinates", "screen_coordinates", "mirror_frame"],
+      "properties": {
+        "transform": { "const": "T_A_B", "description": "T_A_B 将 B 系坐标变换到 A 系（from_frame → to_frame）" },
+        "image_coordinates": { "type": "string", "minLength": 1 },
+        "screen_coordinates": { "type": "string", "minLength": 1 },
+        "mirror_frame": { "type": "string", "minLength": 1 }
+      }
+    },
+    "patches": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "type": "object",
+        "required": ["patch_id", "attempts"],
+        "properties": {
+          "patch_id": { "type": "string", "minLength": 1, "pattern": "^[^/]+$" },
+          "attempts": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["attempt_id", "path", "capture_status"],
+              "properties": {
+                "attempt_id": { "type": "string", "minLength": 1, "pattern": "^[^/]+$" },
+                "path": {
+                  "type": "string",
+                  "pattern": "^patches/[^/]+/attempts/[^/]+/attempt\\.json$"
+                },
+                "capture_status": { "enum": ["collecting", "complete", "aborted"] }
+              }
+            }
+          }
+        }
+      }
+    },
+    "files": {
+      "type": "array",
+      "description": "除 session.json 外包内全部文件的清单；读取端要求与 ZIP 条目精确一致。",
+      "items": {
+        "type": "object",
+        "required": ["path", "sha256", "size_bytes"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_][A-Za-z0-9._/\\-]*$",
+            "description": "包内相对路径，POSIX 分隔，不允许 .."
+          },
+          "sha256": { "$ref": "#/$defs/sha256" },
+          "size_bytes": { "type": "integer", "minimum": 0 }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}
