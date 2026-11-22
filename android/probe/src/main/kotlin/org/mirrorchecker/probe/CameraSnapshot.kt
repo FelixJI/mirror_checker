@@ -55,7 +55,7 @@ data class CameraSnapshot(
     val exposureTimeRangeNs: LongRange?,
     val sensitivityRangeIso: IntRange?,
     val maxFrameDurationNs: Long?,
-    /** CONTROL_AE_AVAILABLE_MODES 名称化：off/on/always_on/...。 */
+    /** CONTROL_AE_AVAILABLE_MODES 名称化：off/on；闪光等变体保留 mode_N 原始名。 */
     val aeModes: List<String>,
     /** CONTROL_AF_AVAILABLE_MODES 名称化：off、auto、macro、continuous 系列等。 */
     val afModes: List<String>,

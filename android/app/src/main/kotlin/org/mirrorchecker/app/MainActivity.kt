@@ -245,7 +245,7 @@ private fun CameraCard(
 }
 
 /** 根据相机能力选择试开模式并夹紧请求参数。 */
-private fun runTrial(context: Context, snapshot: CameraSnapshot): TrialResult {
+private suspend fun runTrial(context: Context, snapshot: CameraSnapshot): TrialResult {
     val candidate = StreamPlanner.candidates(snapshot.yuvSizes, snapshot.fpsRanges).firstOrNull()
         ?: return TrialResult(
             cameraId = snapshot.cameraId,
