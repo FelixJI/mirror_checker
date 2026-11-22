@@ -81,6 +81,14 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # 输出统一 UTF-8：Windows 非 UTF-8 控制台（如 cp1252/cp936）下，
+    # 中文消息会触发 UnicodeEncodeError 或被 backslashreplace 转义。
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8", errors="replace")
+            except (ValueError, OSError):  # pragma: no cover - 非常规流
+                pass
     parser = build_parser()
     args = parser.parse_args(argv)
     try:

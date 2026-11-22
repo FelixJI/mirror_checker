@@ -17,10 +17,14 @@ def _run(args: list[str]) -> subprocess.CompletedProcess:
     existing = env.get("PYTHONPATH", "")
     parts = [str(REPO_ROOT / "python")] + ([existing] if existing else [])
     env["PYTHONPATH"] = os.pathsep.join(parts)
+    # 子进程输出强制 UTF-8，避免依赖宿主控制台代码页
+    env["PYTHONIOENCODING"] = "utf-8"
     return subprocess.run(
         [sys.executable, "-m", "mirror_cli", *args],
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         env=env,
         cwd=REPO_ROOT,
     )
