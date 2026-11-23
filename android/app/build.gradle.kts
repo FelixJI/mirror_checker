@@ -10,7 +10,8 @@ android {
 
     defaultConfig {
         applicationId = "org.mirrorchecker.app"
-        // PR-03 首个诊断 APK；版本随 PR 推进（H03 首台平板确认后锁定 minSdk）
+        // PR-03 首个诊断 APK；版本号由 release 工作流手动触发递增
+        // （Actions → release → patch/minor/major 或显式版本，见 .github/workflows/release.yml）
         minSdk = 26
         targetSdk = 35
         versionCode = 3
