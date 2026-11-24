@@ -15,7 +15,7 @@ import android.util.Range
 import android.view.Surface
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.mirrorchecker.probe.CapturedFrameTiming
-import org.mirrorchecker.probe.FpsRange
+import org.mirrorchecker.probe.StreamCandidate
 import org.mirrorchecker.probe.TrialRequest
 import org.mirrorchecker.probe.TrialResult
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -36,28 +36,10 @@ import kotlin.coroutines.resumeWithException
  */
 class CameraTrialRunner(private val context: Context) {
 
-    data class Config(
-        val widthPx: Int,
-        val heightPx: Int,
-        val targetFps: Int,
-        val fpsRange: FpsRange,
-        val mode: String,
-        /** manual 模式的请求值（已夹紧到相机实测范围）。 */
-        val requestedExposureTimeNs: Long? = null,
-        val requestedSensitivityIso: Int? = null,
-    ) {
-        init {
-            if (mode == "manual") {
-                require(requestedExposureTimeNs != null && requestedSensitivityIso != null) {
-                    "manual 模式必须提供请求曝光与 ISO"
-                }
-            }
-        }
-    }
-
     suspend fun run(
         cameraId: String,
-        config: Config,
+        candidate: StreamCandidate,
+        trialRequest: TrialRequest,
         captureCount: Int = 16,
         timeoutMs: Long = 10_000,
     ): TrialResult {
@@ -76,26 +58,26 @@ class CameraTrialRunner(private val context: Context) {
             val manager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
             device = manager.openCameraCompat(cameraId, handler)
 
-            reader = ImageReader.newInstance(config.widthPx, config.heightPx, android.graphics.ImageFormat.YUV_420_888, 3)
+            reader = ImageReader.newInstance(candidate.size.widthPx, candidate.size.heightPx, android.graphics.ImageFormat.YUV_420_888, 3)
             reader.setOnImageAvailableListener({ r -> r.acquireLatestImage()?.close() }, handler)
 
             val request = device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply {
                 addTarget(reader.surface)
                 set(
                     CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,
-                    Range(config.fpsRange.minFps, config.fpsRange.maxFps),
+                    Range(candidate.fpsRange.minFps, candidate.fpsRange.maxFps),
                 )
-                if (config.mode == "manual") {
+                if (trialRequest.mode == "manual") {
                     set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_OFF)
-                    val exposure = config.requestedExposureTimeNs
-                    val sensitivity = config.requestedSensitivityIso
+                    val exposure = trialRequest.requestedExposureTimeNs
+                    val sensitivity = trialRequest.requestedSensitivityIso
                     if (exposure != null && sensitivity != null) {
                         set(CaptureRequest.SENSOR_EXPOSURE_TIME, exposure)
                         set(CaptureRequest.SENSOR_SENSITIVITY, sensitivity)
                     }
                 } else {
                     set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON)
-                    set(CaptureRequest.CONTROL_AE_LOCK, true)
+                    if (trialRequest.mode == "ae_lock") set(CaptureRequest.CONTROL_AE_LOCK, true)
                 }
             }
 
@@ -127,28 +109,20 @@ class CameraTrialRunner(private val context: Context) {
 
             return TrialResult(
                 cameraId = cameraId,
-                widthPx = config.widthPx,
-                heightPx = config.heightPx,
-                targetFps = config.targetFps,
-                request = TrialRequest(
-                    mode = config.mode,
-                    requestedExposureTimeNs = config.requestedExposureTimeNs,
-                    requestedSensitivityIso = config.requestedSensitivityIso,
-                ),
+                widthPx = candidate.size.widthPx,
+                heightPx = candidate.size.heightPx,
+                targetFps = candidate.targetFps,
+                request = trialRequest,
                 frames = frames.toList(),
                 error = if (frames.isEmpty()) "试开未收到任何 CaptureResult（超时 ${timeoutMs}ms）" else null,
             )
         } catch (t: Throwable) {
             return TrialResult(
                 cameraId = cameraId,
-                widthPx = config.widthPx,
-                heightPx = config.heightPx,
-                targetFps = config.targetFps,
-                request = TrialRequest(
-                    mode = config.mode,
-                    requestedExposureTimeNs = config.requestedExposureTimeNs,
-                    requestedSensitivityIso = config.requestedSensitivityIso,
-                ),
+                widthPx = candidate.size.widthPx,
+                heightPx = candidate.size.heightPx,
+                targetFps = candidate.targetFps,
+                request = trialRequest,
                 frames = frames.toList(),
                 error = "试开失败：${t.javaClass.simpleName}: ${t.message}",
             )

@@ -41,8 +41,8 @@ class CameraScreenTest(unittest.TestCase):
             image_height_px=4,
             focal_length_px=8.0,
         )
-        # 中心视线沿 -z
-        center = camera.pixel_ray(1, 1)  # 像素中心 (1.5-2)= -0.5? 不居中,W=4 偶数
+        self.assertGreater(camera.pixel_ray(1, 0)[1], 0.0)
+        self.assertLess(camera.pixel_ray(1, 3)[1], 0.0)
         # 偶数网格没有正好居中的像素;检查对称性:像素 (0,1) 与 (3,1) 的 x 分量相反
         left = camera.pixel_ray(0, 1)
         right = camera.pixel_ray(3, 1)
@@ -167,7 +167,7 @@ class TraceConsistencyTest(unittest.TestCase):
             u_i = column + 0.5 - camera.image_width_px / 2.0
             v_j = row + 0.5 - camera.image_height_px / 2.0
             expected_u = 0.5 + 0.27 * u_i / (camera.focal_length_px * screen.width_m)
-            expected_v = 0.5 + 0.27 * v_j / (camera.focal_length_px * screen.height_m)
+            expected_v = 0.5 - 0.27 * v_j / (camera.focal_length_px * screen.height_m)
             self.assertAlmostEqual(
                 obs.screen_uv[0], expected_u, places=9, msg=f"像素 {obs.pixel} u"
             )

@@ -25,7 +25,7 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
-from .canonical import canonical_sha256, hash_object_excluding, sha256_hex
+from .canonical import sha256_hex, source_object_hash
 from .contracts import (
     CAPTURE_STATUSES,
     CALIBRATION_INDEX_PATH,
@@ -309,7 +309,7 @@ def _validate_device(session: dict[str, Any], entries: dict[str, bytes]) -> dict
     config = device.get("device_config")
     if not isinstance(config, dict):
         raise ContractError(f"{where}: device_config 必须是对象（采集配置快照）")
-    recomputed = canonical_sha256(config)
+    recomputed = source_object_hash(entries[DEVICE_PATH], field="device_config")
     if device.get("device_config_hash") != recomputed:
         raise ContractError(
             f"{where}: device_config_hash 与 device_config 内容不匹配（配置不匹配；"
@@ -356,7 +356,7 @@ def _validate_recipe(
 
     registered = recipe.get("recipe_hash")
     check_sha256(registered, "recipe_hash", where)
-    recomputed = hash_object_excluding(recipe, "recipe_hash")
+    recomputed = source_object_hash(entries[RECIPE_PATH], exclude="recipe_hash")
     if registered != recomputed:
         raise ContractError(
             f"{where}: recipe_hash 与配方内容不匹配（配置不匹配；"

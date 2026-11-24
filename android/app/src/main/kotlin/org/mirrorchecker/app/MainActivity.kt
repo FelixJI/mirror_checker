@@ -256,23 +256,8 @@ private suspend fun runTrial(context: Context, snapshot: CameraSnapshot): TrialR
             frames = emptyList(),
             error = "没有可用的常规宽高比 YUV 输出尺寸",
         )
-    val manual = snapshot.hasManualSensor && snapshot.aeOffAvailable &&
-        snapshot.exposureTimeRangeNs != null && snapshot.sensitivityRangeIso != null
-    val mode = when {
-        manual -> "manual"
-        snapshot.aeLockAvailable -> "ae_lock"
-        else -> "auto"
-    }
-    val config = CameraTrialRunner.Config(
-        widthPx = candidate.size.widthPx,
-        heightPx = candidate.size.heightPx,
-        targetFps = candidate.targetFps,
-        fpsRange = candidate.fpsRange,
-        mode = mode,
-        requestedExposureTimeNs = snapshot.exposureTimeRangeNs?.let { 10_000_000L.coerceIn(it.first, it.last) },
-        requestedSensitivityIso = snapshot.sensitivityRangeIso?.let { 100.coerceIn(it.first, it.last) },
-    )
-    return CameraTrialRunner(context).run(snapshot.cameraId, config)
+    val request = ControlClassifier.trialRequest(snapshot)
+    return CameraTrialRunner(context).run(snapshot.cameraId, candidate, request)
 }
 
 private fun buildReport(

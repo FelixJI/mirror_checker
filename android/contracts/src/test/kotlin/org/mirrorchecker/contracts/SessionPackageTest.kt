@@ -94,6 +94,18 @@ class SessionPackageTest {
         JsonObject(obj.toMutableMap().apply { put(key, value) })
 
     @Test
+    fun `纳秒时间戳仅接受 JSON 字符串`() {
+        val ns = "9007199254740993"
+        assertEquals(ns, Contracts.checkNsTimestamp(JsonPrimitive(ns), "timestamp", "frame"))
+        try {
+            Contracts.checkNsTimestamp(Json.parseToJsonElement(ns), "timestamp", "frame")
+            fail("JSON 数值必须被拒绝")
+        } catch (e: ContractException) {
+            assertTrue(e.message!!.contains("frame: timestamp"))
+        }
+    }
+
+    @Test
     fun `范例会话在 Android 端可解析并校验通过`() {
         val pkg = SessionPackage.open(fixtureFile())
         assertEquals("5f2c1a4e-8b3d-4c6a-9e0f-1a2b3c4d5e6f", pkg.sessionId)
