@@ -2,7 +2,7 @@ package org.mirrorchecker.contracts
 
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.JsonPrimitive
 
 /** 契约违规。消息以“包内路径: 字段路径”开头，与 Python 端 mirror_core 一致。 */
 class ContractException(message: String) : RuntimeException(message)
@@ -52,7 +52,7 @@ object Contracts {
     }
 
     fun checkNsTimestamp(value: JsonElement?, field: String, where: String): String {
-        val text = value?.let { runCatching { it.jsonPrimitive.content }.getOrNull() }
+        val text = (value as? JsonPrimitive)?.takeIf { it.isString }?.content
         if (text == null || !NS_TIMESTAMP.matches(text)) {
             throw ContractException(
                 "$where: $field 必须是十进制数字字符串（纳秒），实际为 $text；" +

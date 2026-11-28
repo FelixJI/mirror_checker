@@ -36,6 +36,32 @@ def canonical_json_bytes(obj: object) -> bytes:
     return text.encode("utf-8")
 
 
+class _NumberToken(str):
+    """JSON 解码器已经校验过的数值原文。"""
+
+
+def _canonical_source_value(value: object) -> str:
+    if isinstance(value, _NumberToken):
+        return str(value)
+    if isinstance(value, dict):
+        return "{" + ",".join(
+            _canonical_source_value(key) + ":" + _canonical_source_value(value[key])
+            for key in sorted(value)
+        ) + "}"
+    if isinstance(value, list):
+        return "[" + ",".join(_canonical_source_value(item) for item in value) + "]"
+    return canonical_json_bytes(value).decode("utf-8")
+
+
+def source_object_hash(data: bytes, *, field: str | None = None, exclude: str | None = None) -> str:
+    """按包内原文校验既有摘要，保留数值的指数、尾零与负零。"""
+    document = json.loads(data, parse_float=_NumberToken, parse_int=_NumberToken)
+    obj = document if field is None else document[field]
+    if exclude is not None:
+        obj = {key: value for key, value in obj.items() if key != exclude}
+    return sha256_hex(_canonical_source_value(obj).encode("utf-8"))
+
+
 def sha256_hex(data: bytes) -> str:
     """计算字节串的 SHA-256（小写十六进制）。"""
     return hashlib.sha256(data).hexdigest()

@@ -221,6 +221,11 @@ data class TrialRequest(
     val requestedSensitivityIso: Int?,
 ) {
     init {
+        if (mode == "manual") {
+            require(requestedExposureTimeNs != null && requestedSensitivityIso != null) {
+                "manual 模式必须提供请求曝光与 ISO"
+            }
+        }
         require(mode in MODES) { "mode 只允许 $MODES，实际为 $mode" }
     }
 

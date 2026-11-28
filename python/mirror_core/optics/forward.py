@@ -65,14 +65,14 @@ class Camera:
         """像素 ``(column, row)`` 的视线方向(M 系单位向量)。
 
         像素按中心采样:``u_i = column + 0.5 - W/2``,
-        ``v_j = row + 0.5 - H/2``,方向 ``(u_i, v_j, -f)`` 归一化。
+        ``v_j = H/2 - (row + 0.5)``,方向 ``(u_i, v_j, -f)`` 归一化。
         """
         if column not in range(self.image_width_px):
             raise ValueError(f"列序号越界:{column!r}")
         if row not in range(self.image_height_px):
             raise ValueError(f"行序号越界:{row!r}")
         u_i = column + 0.5 - self.image_width_px / 2.0
-        v_j = row + 0.5 - self.image_height_px / 2.0
+        v_j = self.image_height_px / 2.0 - (row + 0.5)
         d = (u_i, v_j, -self.focal_length_px)
         norm = (u_i * u_i + v_j * v_j + self.focal_length_px**2) ** 0.5
         return (d[0] / norm, d[1] / norm, d[2] / norm)

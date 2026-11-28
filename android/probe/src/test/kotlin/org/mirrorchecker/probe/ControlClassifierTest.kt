@@ -93,6 +93,24 @@ class ControlClassifierTest {
     }
 
     @Test
+    fun `试开请求按本相机档位选择且手动参数夹紧到可用范围`() {
+        val manual = manualCapableCamera().copy(
+            exposureTimeRangeNs = 20_000_000L..30_000_000L,
+            sensitivityRangeIso = 50..80,
+        )
+        assertEquals(TrialRequest("manual", 20_000_000L, 80), ControlClassifier.trialRequest(manual))
+        val lockOnly = lockOnlyCamera()
+        assertEquals(TrialRequest("ae_lock", null, null), ControlClassifier.trialRequest(lockOnly))
+        val auto = lockOnly.copy(requestKeys = emptyList())
+        assertEquals(TrialRequest("auto", null, null), ControlClassifier.trialRequest(auto))
+
+        val trial = manualTrial(List(12) { frame(it) })
+        assertNull(ControlClassifier.observedClass(lockOnly, trial))
+        val lockTrial = trial.copy(cameraId = auto.cameraId, request = TrialRequest("ae_lock", null, null))
+        assertEquals("uncontrolled", ControlClassifier.observedClass(auto, lockTrial)?.controlClass)
+    }
+
+    @Test
     fun `没有 AE OFF 或曝光范围时手动能力不成立`() {
         val noAeOff = manualCapableCamera().copy(aeModes = listOf("on"))
         assertEquals(ControlClassifier.HardwareTier.LOCK_ONLY, ControlClassifier.hardwareTier(noAeOff))

@@ -41,12 +41,22 @@ object ControlClassifier {
         return HardwareTier.UNCONTROLLED
     }
 
+    fun trialRequest(snapshot: CameraSnapshot): TrialRequest = when (hardwareTier(snapshot)) {
+        HardwareTier.MANUAL_CAPABLE -> TrialRequest(
+            "manual",
+            10_000_000L.coerceIn(requireNotNull(snapshot.exposureTimeRangeNs)),
+            100.coerceIn(requireNotNull(snapshot.sensitivityRangeIso)),
+        )
+        HardwareTier.LOCK_ONLY -> TrialRequest("ae_lock", null, null)
+        HardwareTier.UNCONTROLLED -> TrialRequest("auto", null, null)
+    }
+
     /**
      * 结合试开结果给出 device.json 的 control_class（manual/lockable/uncontrolled）。
      * trial 为 null 或试开失败时返回 null（未实测，不得填入正式档案）。
      */
     fun observedClass(snapshot: CameraSnapshot, trial: TrialResult?): ObservedClass? {
-        if (trial == null || trial.error != null) return null
+        if (trial == null || trial.cameraId != snapshot.cameraId || trial.error != null) return null
         val stability = evaluateStability(trial)
         val tier = hardwareTier(snapshot)
 
@@ -67,7 +77,7 @@ object ControlClassifier {
 
         // 可锁定：AE 锁实测曝光稳定（硬件只支持锁，或手动模式实测不稳定时降档）。
         val lockTrial = trial.request.mode == "ae_lock"
-        if (lockTrial && stability.stable) {
+        if (lockTrial && snapshot.aeLockAvailable && stability.stable) {
             val reasons = buildList {
                 add("AE 锁试开：曝光与帧间隔实测稳定")
                 if (tier == HardwareTier.MANUAL_CAPABLE) {

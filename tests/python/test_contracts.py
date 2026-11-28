@@ -3,7 +3,7 @@
 import unittest
 
 from mirror_core import contracts
-from mirror_core.canonical import canonical_json_bytes, canonical_sha256, hash_object_excluding
+from mirror_core.canonical import canonical_json_bytes, canonical_sha256, hash_object_excluding, sha256_hex, source_object_hash
 
 
 class CanonicalJsonTests(unittest.TestCase):
@@ -14,6 +14,14 @@ class CanonicalJsonTests(unittest.TestCase):
     def test_deterministic(self):
         raw = {"x": [1.5, True, None], "y": "s"}
         self.assertEqual(canonical_sha256(raw), canonical_sha256({"y": "s", "x": [1.5, True, None]}))
+
+    def test_hash_verification_preserves_source_numbers(self):
+        config = b'{"z": [1.0E-5, "1.0E-5", -0], "a": 0.10}'
+        expected = sha256_hex(b'{"a":0.10,"z":[1.0E-5,"1.0E-5",-0]}')
+        device = b'{"device_config":' + config + b'}'
+        recipe = config[:-1] + b', "recipe_hash":"ignored"}'
+        self.assertEqual(source_object_hash(device, field="device_config"), expected)
+        self.assertEqual(source_object_hash(recipe, exclude="recipe_hash"), expected)
 
     def test_nan_rejected(self):
         with self.assertRaises(contracts.ContractError):
